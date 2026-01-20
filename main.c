@@ -1,76 +1,88 @@
 #include "funciones.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
 int main() {
     Sector sectores[MAX_SECTORES];
     int opcion;
     int sectorSeleccionado;
 
+    // Intenta cargar datos guardados, si no hay, inicia simulacion
     cargarDatosIndividuales(sectores);
 
     do {
-        printf("\n=================================================================\n");
-        printf("      SISTEMA DE MONITOREO AMBIENTAL QUITO (REMMAQ) v3.1         \n");
-        printf("=================================================================\n");
-        printf("1. Ver Tablero de Control (5 Sectores Principales)\n");
-        printf("2. Actualizar Medicion de un Sector\n");
-        printf("3. Ver Prediccion y Alertas por Sector\n");
-        printf("4. Generar Reporte Oficial (.txt con Fecha)\n");
+        printf("\n==================================================================================\n");
+        printf("              SISTEMA DE MONITOREO MULTIGAS QUITO (REMMAQ)                        \n");
+        printf("==================================================================================\n");
+        printf("1. Ver Tablero de Control Completo (PM2.5, SO2, NO2, CO2)\n");
+        printf("2. Actualizar Medicion de un Sector (Simular Sensor)\n");
+        printf("3. Analisis Predictivo y Normativa (4 Dimensiones)\n");
+        printf("4. Generar Reporte Oficial (.txt)\n");
         printf("5. Guardar Archivos .data y Salir\n");
-        printf("=================================================================\n");
+        printf("6. Ver Historial Detallado por Sector\n");
+        printf("==================================================================================\n");
         
-        opcion = leerEntero("Seleccione opcion: ", 1, 5);
+        opcion = leerEntero("Seleccione opcion: ", 1, 6);
 
         switch (opcion) {
             case 1:
-                printf("\n--- TABLERO DE CONTROL: QUITO METROPOLITANO ---\n");
-                printf("%-16s | %-5s | %-5s | %-6s | %-8s | %-8s\n", 
-                       "SECTOR", "PM2.5", "TEMP", "VIENTO", "PRED(24h)", "ESTADO");
-                printf("%-16s | %-5s | %-5s | %-6s | %-8s | %-8s\n", 
-                       "", "ug/m3", "(C)", "km/h", "ug/m3", "RIESGO");
-                printf("-----------------------------------------------------------------\n");
+                printf("\n--- TABLERO DE CONTROL: GASES Y PARTICULAS ---\n");
+                printf("%-16s | %-5s | %-5s | %-5s | %-6s | %-6s | %-8s\n", 
+                       "SECTOR", "PM2.5", "SO2", "NO2", "CO2", "PRED", "ESTADO");
+                printf("%-16s | %-5s | %-5s | %-5s | %-6s | %-6s | %-8s\n", 
+                       "", "ug/m3", "ug/m3", "ug/m3", "ppm", "24h", "RIESGO");
+                printf("----------------------------------------------------------------------------------\n");
                 
                 for(int i=0; i<MAX_SECTORES; i++) {
-                    printf("%-16s | %-5.1f | %-5.1f | %-6.1f | %-8.1f | %-8s\n", 
+                    printf("%-16s | %-5.1f | %-5.1f | %-5.1f | %-6.0f | %-6.1f | %-8s\n", 
                            sectores[i].nombre, 
-                           sectores[i].actual.pm25,
-                           sectores[i].actual.temperatura,
-                           sectores[i].actual.velocidad_viento,
+                           sectores[i].actual.pm25, sectores[i].actual.so2,
+                           sectores[i].actual.no2, sectores[i].actual.co2,
                            sectores[i].prediccion_futura,
                            sectores[i].nivel_contaminacion);
                 }
-                printf("-----------------------------------------------------------------\n");
+                printf("----------------------------------------------------------------------------------\n");
+                // --- AQUI ESTA LA LINEA QUE FALTABA ---
+                printf("Limites Ref (Max): PM2.5(%.0f), SO2(%.0f), NO2(%.0f), CO2(%.0f)\n", 
+                       LIMITE_PM25, LIMITE_SO2, LIMITE_NO2, LIMITE_CO2);
                 presionarEnter();
                 break;
 
             case 2:
-                printf("\n--- SELECCION DE ESTACION DE MONITOREO ---\n");
+                printf("\n--- SELECCION DE ESTACION PARA ACTUALIZACION ---\n");
                 for(int i=0; i<MAX_SECTORES; i++) {
                     printf("%d. %s\n", sectores[i].id, sectores[i].nombre);
                 }
-                sectorSeleccionado = leerEntero("Elija sector a actualizar: ", 1, MAX_SECTORES);
-                
+                sectorSeleccionado = leerEntero("Elija sector: ", 1, MAX_SECTORES);
                 ingresarMedicionActual(&sectores[sectorSeleccionado - 1]);
-                printf(">> Datos recibidos. Calibrando modelo del sector...\n");
+                printf(">> Datos recibidos. Modelos matematicos recalibrados.\n");
                 presionarEnter();
                 break;
 
             case 3:
-                printf("\n--- ANALISIS DETALLADO POR SECTOR ---\n");
+                printf("\n==================================================================================\n");
+                printf("                     ANALISIS DE RIESGO Y NORMATIVA VIGENTE                       \n");
+                printf("==================================================================================\n");
+                printf("BASE TECNICA: Guias OMS (2021) y Norma TULSMA (Ecuador).\n");
+                printf("LIMITES MAXIMOS (24h):\n");
+                printf(" -> PM2.5: %.1f ug/m3\n", LIMITE_PM25);
+                printf(" -> SO2:   %.1f ug/m3\n", LIMITE_SO2);
+                printf(" -> NO2:   %.1f ug/m3\n", LIMITE_NO2);
+                printf("----------------------------------------------------------------------------------\n");
+
                 for(int i=0; i<MAX_SECTORES; i++) {
                     calcularPrediccionPonderada(&sectores[i]);
                     evaluarAlertasDinamicas(&sectores[i]);
                     generarRecomendaciones(&sectores[i]);
                     
-                    printf("* %s *\n", sectores[i].nombre);
-                    printf("  > Maximo Historico: %.2f\n", sectores[i].maximo_historico);
-                    printf("  > Tendencia (Prediccion): %.2f\n", sectores[i].prediccion_futura);
-                    printf("  > NIVEL DE RIESGO:        %s\n", sectores[i].nivel_contaminacion);
-                    printf("  > ACCION RECOMENDADA:     %s\n", sectores[i].recomendacion);
-                    printf("----------------------------------------------\n");
+                    printf("\n* SECTOR: %s *\n", sectores[i].nombre);
+                    printf("  [Diagnostico]: RIESGO %s (Prediccion PM2.5: %.2f)\n", 
+                           sectores[i].nivel_contaminacion, sectores[i].prediccion_futura);
+                    
+                    printf("  [Plan de Accion Multidimensional]:\n");
+                    printf("   1. SOC: %s\n", sectores[i].rec_social);
+                    printf("   2. CUL: %s\n", sectores[i].rec_cultural);
+                    printf("   3. AMB: %s\n", sectores[i].rec_ambiental);
+                    printf("   4. GLO: %s\n", sectores[i].rec_global);
+                    printf("..................................................................................\n");
                 }
                 presionarEnter();
                 break;
@@ -81,9 +93,12 @@ int main() {
                 break;
 
             case 5:
-                printf("\nGuardando historial en archivos .data individuales...\n");
+                printf("\nGuardando base de datos y saliendo...\n");
                 guardarDatosIndividuales(sectores);
-                printf("Sistema apagado.\n");
+                break;
+                
+            case 6: 
+                verHistorialSector(sectores);
                 break;
         }
 
