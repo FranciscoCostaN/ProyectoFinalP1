@@ -5,7 +5,6 @@ int main() {
     int opcion;
     int sectorSeleccionado;
 
-    // Intenta cargar datos guardados, si no hay, inicia simulacion
     cargarDatosIndividuales(sectores);
 
     do {
@@ -40,7 +39,6 @@ int main() {
                            sectores[i].nivel_contaminacion);
                 }
                 printf("----------------------------------------------------------------------------------\n");
-                // --- AQUI ESTA LA LINEA QUE FALTABA ---
                 printf("Limites Ref (Max): PM2.5(%.0f), SO2(%.0f), NO2(%.0f), CO2(%.0f)\n", 
                        LIMITE_PM25, LIMITE_SO2, LIMITE_NO2, LIMITE_CO2);
                 presionarEnter();

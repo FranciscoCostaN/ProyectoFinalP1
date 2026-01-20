@@ -1,8 +1,5 @@
 #include "funciones.h"
 
-// --- VALIDACIONES DE ENTRADA ---
-// Estas funciones evitan que el programa falle si el usuario escribe letras
-
 int esDigito(char c) {
     return (c >= '0' && c <= '9');
 }
@@ -25,7 +22,6 @@ int leerEntero(const char* mensaje, int min, int max) {
     while (!valido) {
         printf("%s", mensaje);
         if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-            // Eliminar salto de linea
             buffer[strcspn(buffer, "\n")] = 0;
             if (strlen(buffer) == 0) continue;
 
@@ -90,46 +86,35 @@ float leerFlotante(const char* mensaje, float min, float max) {
     return resultado;
 }
 
-// --- LOGICA DEL NEGOCIO (QUITO) ---
 
 void inicializarSectoresQuito(Sector sectores[]) {
-    // Definicion de sectores representativos
-    strcpy(sectores[0].nombre, "Carapungo");      // Norte seco
-    strcpy(sectores[1].nombre, "Belisario");      // Comercial/Trafico
-    strcpy(sectores[2].nombre, "Centro Historico"); // Congestion
-    strcpy(sectores[3].nombre, "Cotocollao");     // Residencial
-    strcpy(sectores[4].nombre, "Tumbaco");        // Valle
+    strcpy(sectores[0].nombre, "Carapungo");   
+    strcpy(sectores[1].nombre, "Belisario");   
+    strcpy(sectores[2].nombre, "Centro Historico"); 
+    strcpy(sectores[3].nombre, "Cotocollao");   
+    strcpy(sectores[4].nombre, "Tumbaco");        
 
     printf("Iniciando simulacion con perfiles base de REMMAQ...\n");
 
-    // CARGA DE PERFILES BASE (Semilla inicial)
-    // Sector 1: Carapungo (Polvo alto, viento fuerte)
     sectores[0].actual = (Medicion){28.0, 15.0, 20.0, 450.0, 12.0, 18.0, 45.0};
 
-    // Sector 2: Belisario (Trafico alto -> NO2 y CO2 altos)
     sectores[1].actual = (Medicion){35.0, 10.0, 45.0, 600.0, 15.0, 8.0, 60.0};
 
-    // Sector 3: Centro Historico (Congestion extrema)
     sectores[2].actual = (Medicion){42.0, 12.0, 50.0, 700.0, 16.0, 5.0, 55.0};
 
-    // Sector 4: Cotocollao (Moderado)
     sectores[3].actual = (Medicion){12.0, 5.0, 10.0, 410.0, 13.0, 10.0, 65.0};
 
-    // Sector 5: Tumbaco (Aire limpio)
     sectores[4].actual = (Medicion){8.0, 2.0, 5.0, 400.0, 21.0, 6.0, 40.0};
 
-    // Generacion del historial inicial basado en la semilla
     for(int i = 0; i < MAX_SECTORES; i++) {
         sectores[i].id = i + 1;
         
         for(int j = 0; j < DIAS_HISTORICOS; j++) {
-            // Simulamos variaciones diarias leves para llenar la base de datos
             sectores[i].historial[j] = sectores[i].actual;
-            sectores[i].historial[j].pm25 += ((rand() % 10) - 5); // Variacion +/-
+            sectores[i].historial[j].pm25 += ((rand() % 10) - 5);
             if(sectores[i].historial[j].pm25 < 0) sectores[i].historial[j].pm25 = 1.0;
         }
         
-        // Ejecutamos el modelo matematico inicial
         calcularPrediccionPonderada(&sectores[i]);
         evaluarAlertasDinamicas(&sectores[i]);
         generarRecomendaciones(&sectores[i]);
@@ -140,7 +125,6 @@ void inicializarSectoresQuito(Sector sectores[]) {
 void ingresarMedicionActual(Sector* s) {
     printf("\n--- Actualizar Datos de Sensor: %s ---\n", s->nombre);
     
-    // Ingreso validado de los 4 gases y clima
     s->actual.pm25 = leerFlotante("PM2.5 Actual (0-500): ", 0, 500);
     s->actual.so2  = leerFlotante("SO2 Actual (0-500): ", 0, 500);
     s->actual.no2  = leerFlotante("NO2 Actual (0-500): ", 0, 500);
@@ -150,13 +134,11 @@ void ingresarMedicionActual(Sector* s) {
     s->actual.velocidad_viento = leerFlotante("Viento (km/h): ", 0, 150);
     s->actual.humedad = leerFlotante("Humedad (%): ", 0, 100);
     
-    // Desplazamiento del historial (FIFO: First In First Out)
     for(int i = DIAS_HISTORICOS - 1; i > 0; i--) {
         s->historial[i] = s->historial[i-1];
     }
-    s->historial[0] = s->actual; // El dato nuevo entra en la posicion 0 (HOY)
+    s->historial[0] = s->actual;
     
-    // Recalculo inmediato de predicciones
     calcularPrediccionPonderada(s);
     evaluarAlertasDinamicas(s);
     generarRecomendaciones(s);
@@ -165,38 +147,33 @@ void ingresarMedicionActual(Sector* s) {
 void calcularPrediccionPonderada(Sector* s) {
     float suma_ponderada = 0;
     float total_pesos = 0;
-    int dias_analisis = 10; // Ventana de analisis reciente
+    int dias_analisis = 10; 
     
-    // Algoritmo de Promedio Ponderado Decreciente
     for(int i = 0; i < dias_analisis; i++) {
-        float peso = (float)(dias_analisis - i); // Dia 0 tiene peso 10, dia 9 tiene peso 1
+        float peso = (float)(dias_analisis - i);
         suma_ponderada += s->historial[i].pm25 * peso;
         total_pesos += peso;
     }
     
     s->prediccion_futura = suma_ponderada / total_pesos;
     
-    // Ajustes por factores climaticos (Correccion Ambiental)
-    if(s->actual.velocidad_viento < 5.0) s->prediccion_futura *= 1.15; // Poco viento acumula gases
-    if(s->actual.humedad > 80.0) s->prediccion_futura *= 0.80; // Lluvia limpia el aire
+    if(s->actual.velocidad_viento < 5.0) s->prediccion_futura *= 1.15; 
+    if(s->actual.humedad > 80.0) s->prediccion_futura *= 0.80;
 }
 
 void evaluarAlertasDinamicas(Sector* s) {
-    // 1. Buscamos el maximo registrado en el mes
     float max_historico = 0;
     for(int i=0; i<DIAS_HISTORICOS; i++) {
         if(s->historial[i].pm25 > max_historico) max_historico = s->historial[i].pm25;
     }
     s->maximo_historico = max_historico;
-    if (max_historico < LIMITE_PM25) max_historico = LIMITE_PM25; // Piso minimo normativo
+    if (max_historico < LIMITE_PM25) max_historico = LIMITE_PM25; 
 
-    // 2. Verificamos si algun gas especifico supera la norma OMS
     int gases_fuera_norma = 0;
     if(s->actual.so2 > LIMITE_SO2) gases_fuera_norma++;
     if(s->actual.no2 > LIMITE_NO2) gases_fuera_norma++;
     if(s->actual.co2 > LIMITE_CO2) gases_fuera_norma++;
 
-    // 3. Determinamos nivel de riesgo combinado
     if (s->prediccion_futura < (max_historico * 0.50) && gases_fuera_norma == 0) {
         strcpy(s->nivel_contaminacion, "BAJA");
         s->alerta_activa = 0;
@@ -205,15 +182,14 @@ void evaluarAlertasDinamicas(Sector* s) {
         s->alerta_activa = 0;
     } else if (s->prediccion_futura < (max_historico * 0.90) || gases_fuera_norma == 2) {
         strcpy(s->nivel_contaminacion, "ALTA");
-        s->alerta_activa = 1; // Alerta Naranja
+        s->alerta_activa = 1; 
     } else {
         strcpy(s->nivel_contaminacion, "CRITICA");
-        s->alerta_activa = 2; // Alerta Roja
+        s->alerta_activa = 2; 
     }
 }
 
 void generarRecomendaciones(Sector* s) {
-    // Asignacion de recomendaciones multidimensionales segun nivel de riesgo
     
     if (strcmp(s->nivel_contaminacion, "BAJA") == 0) {
         strcpy(s->rec_social,    "SOCIAL: Espacios seguros para ninos y tercera edad.");
@@ -260,7 +236,6 @@ void verHistorialSector(Sector sectores[]) {
         if(i==0) strcpy(etiqueta, "HOY");
         else sprintf(etiqueta, "-%d d", i);
 
-        // Lectura directa de la memoria RAM donde esta el historial
         printf("%-5s | %-6.1f | %-6.1f | %-6.1f | %-6.0f | %-6.1f\n", 
                etiqueta, s->historial[i].pm25, s->historial[i].so2, 
                s->historial[i].no2, s->historial[i].co2, s->historial[i].temperatura);
@@ -269,12 +244,10 @@ void verHistorialSector(Sector sectores[]) {
     presionarEnter();
 }
 
-// --- PERSISTENCIA (ARCHIVOS .DATA) ---
 
 void guardarDatosIndividuales(Sector sectores[]) {
     char nombreArchivo[100];
     for(int i = 0; i < MAX_SECTORES; i++) {
-        // Limpiamos nombre (Carapungo -> Carapungo.data)
         char nombreLimpio[50];
         strcpy(nombreLimpio, sectores[i].nombre);
         for(int j=0; j<strlen(nombreLimpio); j++){
@@ -283,7 +256,6 @@ void guardarDatosIndividuales(Sector sectores[]) {
         
         sprintf(nombreArchivo, "%s.data", nombreLimpio);
         
-        // Escritura Binaria
         FILE *archivo = fopen(nombreArchivo, "wb");
         if (archivo != NULL) {
             fwrite(&sectores[i], sizeof(Sector), 1, archivo);
@@ -294,10 +266,8 @@ void guardarDatosIndividuales(Sector sectores[]) {
 }
 
 void cargarDatosIndividuales(Sector sectores[]) {
-    // 1. Cargamos simulacion por defecto por si no hay archivos
     inicializarSectoresQuito(sectores); 
     
-    // 2. Intentamos buscar archivos guardados
     char nombreArchivo[100];
     int encontrados = 0;
     
@@ -315,7 +285,6 @@ void cargarDatosIndividuales(Sector sectores[]) {
             fclose(archivo);
             encontrados++;
             
-            // Recalcular con los datos recuperados
             calcularPrediccionPonderada(&sectores[i]);
             evaluarAlertasDinamicas(&sectores[i]);
             generarRecomendaciones(&sectores[i]);
@@ -332,7 +301,6 @@ void generarReporteTexto(Sector sectores[]) {
         return;
     }
 
-    // Obtener fecha/hora actual
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
 
